@@ -5,8 +5,8 @@ import 'package:web/web.dart' as web;
 
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
+import 'package:audioplayers/audioplayers.dart';
 
 class SmartMirrorScreen extends StatefulWidget {
   const SmartMirrorScreen({super.key});
@@ -17,46 +17,79 @@ class SmartMirrorScreen extends StatefulWidget {
 
 class _SmartMirrorScreenState extends State<SmartMirrorScreen> {
   late final String _cameraViewType;
+
   final SpeechToText _speech = SpeechToText();
-  final FlutterTts _tts = FlutterTts();
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   bool _isListening = false;
   bool _isThinking = false;
 
-  String _lastCommand = '';
+  String _lastWords = '';
   String _aiResponse = '';
 
   final List<Map<String, String>> _conversation = [];
   List<Map<String, dynamic>> _reminders = [];
 
   String emotion = 'loading...';
-  String _currentMood = 'Neutre';
+  String _currentMood = 'neutral';
 
   DateTime _now = DateTime.now();
+
   Timer? _timer;
   Timer? _emotionTimer;
+  Timer? _listenTimer;
+
+  int _musicIndex = 0;
+  int _quranIndex = 0;
+  int _adhkarIndex = 0;
 
   static const String pythonBaseUrl = "http://127.0.0.1:5000";
+
+  final List<String> _musicPlaylist = [
+    "assets/audio/music/song1.mp3",
+    "assets/audio/music/song2.mp3",
+    "assets/audio/music/song3.mp3",
+  ];
+
+  final List<String> _quranPlaylist = [
+    "assets/audio/quran/yassin.mp3",
+    "assets/audio/quran/rahman.mp3",
+    "assets/audio/quran/baqara.mp3",
+    "assets/audio/quran/mulk.mp3",
+    "assets/audio/quran/wakiah.mp3",
+  ];
+
+  final List<String> _adhkarPlaylist = [
+    "assets/audio/adhkar/adhkar1.mp3",
+    "assets/audio/adhkar/adhkar2.mp3",
+    "assets/audio/adhkar/adhkar3.mp3",
+  ];
 
   @override
   void initState() {
     super.initState();
+
     _cameraViewType = 'python-camera-stream';
 
-ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
-  final img = web.HTMLImageElement()
-    ..src = "$pythonBaseUrl/video_feed"
-    ..style.width = '100%'
-    ..style.height = '100%'
-    ..style.objectFit = 'cover';
+    ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
+      final img = web.HTMLImageElement()
+        ..src = "$pythonBaseUrl/video_feed";
 
-  return img;
-});
+      img.style.setProperty('width', '100%');
+      img.style.setProperty('height', '100%');
+      img.style.setProperty('object-fit', 'cover');
+
+      return img;
+    });
+
     _initVoice();
-    _initTTS();
     _startClock();
     _addDefaultReminders();
     _startEmotionPolling();
+  }
+
+  Future<void> _initVoice() async {
+    await _speech.initialize();
   }
 
   void _startClock() {
@@ -69,8 +102,6 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
 
   void _startEmotionPolling() {
     getEmotion();
-
-    _emotionTimer?.cancel();
     _emotionTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       if (!mounted) return;
       await getEmotion();
@@ -83,21 +114,16 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
         Uri.parse("$pythonBaseUrl/current-emotion"),
       );
 
-      debugPrint("STATUS = ${response.statusCode}");
-      debugPrint("BODY = ${response.body}");
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-
         if (!mounted) return;
+
         setState(() {
-          emotion = data["emotion"]?.toString() ?? "error";
+          emotion = data["emotion"] ?? "neutral";
           _currentMood = emotion;
         });
       }
-    } catch (e) {
-      debugPrint("ERROR = $e");
-    }
+    } catch (_) {}
   }
 
   void _addDefaultReminders() {
@@ -109,157 +135,239 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
     ];
   }
 
-  Future<void> _initVoice() async {
-    await _speech.initialize(
-      onStatus: (status) {
-        debugPrint('Speech status: $status');
-        if (status == 'done' && mounted) {
-          setState(() => _isListening = false);
-        }
-      },
-      onError: (error) => debugPrint('Speech error: $error'),
-    );
-  }
-
-  Future<void> _initTTS() async {
-    await _tts.setLanguage('fr-FR');
-    await _tts.setPitch(1.0);
-    await _tts.setSpeechRate(0.9);
-  }
-
   Future<void> _startListening() async {
-    if (_isListening) return;
+    final available = await _speech.initialize();
+
+    if (!available) {
+      _setAnswer("Je ne peux pas accéder au micro.");
+      return;
+    }
 
     setState(() {
       _isListening = true;
       _isThinking = false;
-      _aiResponse = '';
-      _lastCommand = '';
+      _lastWords = '';
     });
 
     await _speech.listen(
-      onResult: (result) async {
-        if (!mounted) return;
+      localeId: 'fr_FR',
+      listenFor: const Duration(seconds: 8),
+      pauseFor: const Duration(seconds: 3),
+      partialResults: true,
+      cancelOnError: true,
+      onResult: (result) {
         setState(() {
-          _lastCommand = result.recognizedWords;
+          _lastWords = result.recognizedWords;
         });
       },
-      listenFor: const Duration(seconds: 5),
-      pauseFor: const Duration(seconds: 2),
-      partialResults: true,
-      localeId: 'fr_FR',
-      cancelOnError: true,
     );
 
-    Future.delayed(const Duration(seconds: 6), () async {
-      if (!mounted) return;
-
-      await _speech.stop();
-
-      if (!mounted) return;
-      setState(() {
-        _isListening = false;
-      });
-
-      if (_lastCommand.trim().isNotEmpty) {
-        await _processWithAI(_lastCommand.trim());
-      }
+    _listenTimer?.cancel();
+    _listenTimer = Timer(const Duration(seconds: 9), () async {
+      await _finishListening();
     });
   }
 
-  Future<void> _processWithAI(String userText) async {
+  Future<void> _finishListening() async {
+    await _speech.stop();
+
     if (!mounted) return;
 
     setState(() {
       _isListening = false;
+    });
+
+    if (_lastWords.trim().isEmpty) {
+      _setAnswer("Je n’ai rien entendu. Tu peux répéter ?");
+      return;
+    }
+
+    await _handleCommand(_lastWords.trim());
+  }
+
+  void _stopListening() {
+    _listenTimer?.cancel();
+    _speech.stop();
+
+    setState(() {
+      _isListening = false;
+    });
+
+    if (_lastWords.trim().isNotEmpty) {
+      _handleCommand(_lastWords.trim());
+    }
+  }
+
+  Future<void> _playAsset(String path) async {
+    await _audioPlayer.stop();
+    await _audioPlayer.play(
+      AssetSource(path.replaceFirst('assets/', '')),
+    );
+  }
+
+  Future<void> _playMusic() async {
+    await _playAsset(_musicPlaylist[_musicIndex]);
+  }
+
+  Future<void> _playQuran() async {
+    await _playAsset(_quranPlaylist[_quranIndex]);
+  }
+
+  Future<void> _playAdhkar() async {
+    await _playAsset(_adhkarPlaylist[_adhkarIndex]);
+  }
+
+  Future<void> _nextMusic() async {
+    _musicIndex = (_musicIndex + 1) % _musicPlaylist.length;
+    await _playMusic();
+  }
+
+  Future<void> _nextQuran() async {
+    _quranIndex = (_quranIndex + 1) % _quranPlaylist.length;
+    await _playQuran();
+  }
+
+  Future<void> _nextAdhkar() async {
+    _adhkarIndex = (_adhkarIndex + 1) % _adhkarPlaylist.length;
+    await _playAdhkar();
+  }
+
+  Future<void> _stopAudio() async {
+    await _audioPlayer.stop();
+  }
+
+  void _setAnswer(String text) {
+    _aiResponse = text;
+
+    _conversation.add({
+      'role': 'assistant',
+      'text': _aiResponse,
+    });
+
+    setState(() {
+      _isThinking = false;
+      _isListening = false;
+    });
+
+    _speak(_aiResponse);
+  }
+
+Future<void> _askAI(String message) async {
+  try {
+
+    setState(() {
       _isThinking = true;
     });
 
-    _conversation.add({'role': 'user', 'text': userText});
+    final response = await http.post(
+      Uri.parse("http://127.0.0.1:5050/ask-agent"),
 
-    await Future.delayed(const Duration(milliseconds: 300));
-    await _processCommandLocal(userText);
-  }
+      headers: {
+        "Content-Type": "application/json",
+      },
 
-  Future<void> _processCommandLocal(String command) async {
-    final lower = command.toLowerCase();
+      body: jsonEncode({
+        "message": message,
+      }),
+    );
 
-    if (lower.contains('bonjour') ||
-        lower.contains('bnjr') ||
-        lower.contains('salut') ||
-        lower.contains('hello') ||
-        lower.contains('صباح')) {
-      _aiResponse =
-          'Bonjour 😊 cv ? أنا Najma، موجودة باش نعاونك. تحب نوريك الطقس، الوقت، ولا الرابلات؟';
-    } else if (lower.contains('cv') ||
-        lower.contains('ça va') ||
-        lower.contains('ca va')) {
-      _aiResponse =
-          'أنا لاباس، ونتي cv ؟ إذا تحب نوريك المتيو، الوقت، والرابلات متاعك.';
-    } else if (lower.contains('météo') ||
-        lower.contains('meteo') ||
-        lower.contains('جو')) {
-      _aiResponse = 'الجو زين، 24 درجة وشمس';
-    } else if (lower.contains('heure') ||
-        lower.contains('وقت') ||
-        lower.contains('ساعة')) {
-      _aiResponse =
-          'توّا الساعة ${_now.hour.toString().padLeft(2, '0')}:${_now.minute.toString().padLeft(2, '0')}.';
-    } else if (lower.contains('rappel') ||
-        lower.contains('rappels') ||
-        lower.contains('تذكير')) {
-      final activeReminders =
-          _reminders.where((r) => r['active'] == true).toList();
+    if (response.statusCode == 200) {
 
-      if (activeReminders.isEmpty) {
-        _aiResponse = 'ما عندك حتى rappel actif توّا.';
-      } else {
-        final text =
-            activeReminders.map((r) => '${r['title']} à ${r['time']}').join(', ');
-        _aiResponse = 'عندك الرابلات هاذم: $text';
+      final data = jsonDecode(response.body);
+
+      String answer =
+          data["answer"] ?? "Je n’ai pas compris.";
+
+      String action =
+          data["action"] ?? "none";
+
+      if (action == "play_music") {
+        await _playMusic();
       }
-    } else if (lower.contains('calme')) {
-      _changeMood('Calme');
-      _aiResponse = 'حاضر، بدلت المود إلى calme. خذ نفس وارتاح شوية.';
-    } else if (lower.contains('triste')) {
-      _changeMood('Triste');
-      _aiResponse =
-          'أنا معاك. بدلت المود إلى triste، وإذا تحب نهدّيك ونفكرك تشرب ماء وتاخذ راحة.';
-    } else if (lower.contains('énergique') ||
-        lower.contains('energetique')) {
-      _changeMood('Énergique');
-      _aiResponse = 'هاو المود ولى énergique! يعطيك الطاقة.';
-    } else if (lower.contains('eau') || lower.contains('ماء')) {
-      _aiResponse = 'تذكير صغير: اشرب ماء، صحتك تهمني برشة 💙';
+
+      if (action == "play_quran") {
+        await _playQuran();
+      }
+
+      if (action == "play_adhkar") {
+        await _playAdhkar();
+      }
+
+      if (action == "stop_audio") {
+        await _stopAudio();
+      }
+
+      _setAnswer(answer);
+
     } else {
-      _aiResponse =
-          'سمعتك، أما ما فهمتش مليح. تنجم تقلي bonjour، météo، heure، rappels، calme.';
+
+      _setAnswer("Erreur serveur AI.");
     }
 
-    _conversation.add({'role': 'assistant', 'text': _aiResponse});
+  } catch (e) {
 
-    if (!mounted) return;
-    setState(() {
-      _isThinking = false;
+    print("AI ERROR: $e");
+
+    _setAnswer("Erreur connexion DeepSeek.");
+  }
+}
+
+  Future<void> _handleCommand(String cmd) async {
+    final text = cmd.toLowerCase();
+
+    _conversation.add({
+      'role': 'user',
+      'text': cmd,
     });
 
-    await _speak(_aiResponse);
+    if (text.contains('musique') ||
+        text.contains('music') ||
+        text.contains('chanson') ||
+        text.contains('ghne') ||
+        text.contains('ghneya')) {
+      await _playMusic();
+      _setAnswer("Avec plaisir 🎵 je lance la musique.");
+    } else if (text.contains('coran') ||
+        text.contains('quran') ||
+        text.contains('qoran') ||
+        text.contains('sourate')) {
+      await _playQuran();
+      _setAnswer("Je lance le Coran 📖");
+    } else if (text.contains('adhkar') ||
+        text.contains('azkar') ||
+        text.contains('dhikr')) {
+      await _playAdhkar();
+      _setAnswer("Je lance les adhkar 🤍");
+    } else if (text.contains('next') ||
+        text.contains('suivant') ||
+        text.contains('suivante')) {
+      await _nextMusic();
+      _setAnswer("Je passe à la musique suivante 🎵");
+    } else if (text.contains('sourate suivante')) {
+      await _nextQuran();
+      _setAnswer("Je passe à la sourate suivante 📖");
+    } else if (text.contains('adhkar suivant')) {
+      await _nextAdhkar();
+      _setAnswer("Je passe aux adhkar suivants 🤍");
+    } else if (text.contains('stop') ||
+        text.contains('arrête') ||
+        text.contains('arrete')) {
+      await _stopAudio();
+      _setAnswer("D’accord, j’arrête la lecture.");
+    } else {
+      await _askAI(cmd);
+    }
   }
 
-  Future<void> _speak(String text) async {
-    debugPrint('TTS => $text');
+  void _speak(String text) {
+    final utterance = web.SpeechSynthesisUtterance(text)
+      ..lang = 'fr-FR'
+      ..pitch = 1
+      ..rate = 0.9
+      ..volume = 1;
 
-    await _tts.stop();
-    await Future.delayed(const Duration(milliseconds: 200));
-    await _tts.setLanguage('fr-FR');
-    await _tts.setPitch(1.0);
-    await _tts.setSpeechRate(0.9);
-    await _tts.speak(text);
-  }
-
-  void _changeMood(String mood) {
-    if (!mounted) return;
-    setState(() => _currentMood = mood);
+    web.window.speechSynthesis.cancel();
+    web.window.speechSynthesis.speak(utterance);
   }
 
   void _checkReminders() {
@@ -268,7 +376,7 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
 
     for (final reminder in _reminders) {
       if (reminder['time'] == currentTime && reminder['active'] == true) {
-        _speak('تذكير: ${reminder['title']}');
+        _speak('Rappel ${reminder['title']}');
         reminder['active'] = false;
       }
     }
@@ -277,9 +385,10 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
   @override
   void dispose() {
     _speech.stop();
-    _tts.stop();
+    _audioPlayer.dispose();
     _timer?.cancel();
     _emotionTimer?.cancel();
+    _listenTimer?.cancel();
     super.dispose();
   }
 
@@ -356,9 +465,7 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            emotion == "no_face"
-                                ? "Humeur: no face"
-                                : "Humeur: $emotion",
+                            "Humeur: $emotion",
                             style: TextStyle(color: _getMoodColor()),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -435,9 +542,7 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                   child: HtmlElementView(
-                    viewType: _cameraViewType,
-                  ),
+                  child: HtmlElementView(viewType: _cameraViewType),
                 ),
               ),
             ),
@@ -449,35 +554,7 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (_isThinking)
-                    Container(
-                      padding: const EdgeInsets.all(15),
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.orange),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.orange,
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Najma réfléchit...',
-                            style: TextStyle(color: Colors.orange),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (_aiResponse.isNotEmpty && !_isThinking)
+                  if (_aiResponse.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.all(15),
                       margin: const EdgeInsets.only(bottom: 20),
@@ -496,7 +573,13 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
                       ),
                     ),
                   GestureDetector(
-                    onTap: _startListening,
+                    onTap: () {
+                      if (_isListening) {
+                        _stopListening();
+                      } else {
+                        _startListening();
+                      }
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(25),
                       decoration: BoxDecoration(
@@ -505,8 +588,7 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
                             : Colors.white.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(25),
                         border: Border.all(
-                          color:
-                              _isListening ? Colors.red : Colors.cyanAccent,
+                          color: _isListening ? Colors.red : Colors.cyanAccent,
                           width: 3,
                         ),
                       ),
@@ -520,7 +602,7 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            _isListening ? 'J\'écoute...' : 'Parlez à Najma',
+                            _isListening ? 'J’écoute...' : 'Parlez à Najma',
                             style: TextStyle(
                               color: _isListening
                                   ? Colors.red
@@ -533,17 +615,11 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  if (_lastCommand.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'Vous: "$_lastCommand"',
-                        style: const TextStyle(color: Colors.white70),
-                      ),
+                  if (_lastWords.isNotEmpty)
+                    Text(
+                      'Vous: $_lastWords',
+                      style: const TextStyle(color: Colors.white70),
+                      textAlign: TextAlign.center,
                     ),
                   const SizedBox(height: 30),
                   const Text(
@@ -557,63 +633,61 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
                   const SizedBox(height: 10),
                   Expanded(
                     child: ListView(
-                      children: _reminders
-                          .map(
-                            (r) => Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
+                      children: _reminders.map((r) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: r['active']
+                                ? Colors.purpleAccent.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: r['active']
+                                  ? Colors.purpleAccent
+                                  : Colors.grey,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                r['active']
+                                    ? Icons.alarm_on
+                                    : Icons.alarm_off,
                                 color: r['active']
-                                    ? Colors.purpleAccent.withOpacity(0.2)
-                                    : Colors.grey.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: r['active']
-                                      ? Colors.purpleAccent
-                                      : Colors.grey,
+                                    ? Colors.purpleAccent
+                                    : Colors.grey,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      r['time'],
+                                      style: TextStyle(
+                                        color: r['active']
+                                            ? Colors.purpleAccent
+                                            : Colors.grey,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      r['title'],
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 12,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    r['active']
-                                        ? Icons.alarm_on
-                                        : Icons.alarm_off,
-                                    color: r['active']
-                                        ? Colors.purpleAccent
-                                        : Colors.grey,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          r['time'],
-                                          style: TextStyle(
-                                            color: r['active']
-                                                ? Colors.purpleAccent
-                                                : Colors.grey,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          r['title'],
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 12,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                          .toList(),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                 ],
@@ -643,12 +717,6 @@ ui.platformViewRegistry.registerViewFactory(_cameraViewType, (int viewId) {
         return Colors.redAccent;
       case 'error':
         return Colors.redAccent;
-      case 'calme':
-        return Colors.blueAccent;
-      case 'énergique':
-        return Colors.orangeAccent;
-      case 'triste':
-        return Colors.grey;
       default:
         return Colors.greenAccent;
     }

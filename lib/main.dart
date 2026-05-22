@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'mirror_screen.dart';
+import 'smart_mirror_screenv2.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -18,9 +18,19 @@ dependencies:
   speech_to_text: ^6.5.1
   flutter_tts: ^3.8.5
   http: ^1.1.0
-
+  audioplayers: ^5.2.1
+  geolocator: ^12.0.0
+  web: ^1.0.0
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
 
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/audio/music/
+    - assets/audio/quran/
+    - assets/audio/adhkar/
