@@ -782,7 +782,7 @@ Garde tes réponses courtes (2-4 phrases max) pour être affichées sur le miroi
                     child: Container(
                       padding: const EdgeInsets.all(15),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: _weatherLoaded
@@ -865,7 +865,7 @@ Garde tes réponses courtes (2-4 phrases max) pour être affichées sur le miroi
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: _getMoodColor().withOpacity(0.2),
+                      color: _getMoodColor().withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: _getMoodColor()),
                     ),
@@ -890,10 +890,10 @@ Garde tes réponses courtes (2-4 phrases max) pour être affichées sur le miroi
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(
-                          color: Colors.cyanAccent.withOpacity(0.3),
+                          color: Colors.cyanAccent.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Column(
@@ -918,8 +918,8 @@ Garde tes réponses courtes (2-4 phrases max) pour être affichées sur le miroi
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
                                     color: isUser
-                                        ? Colors.blue.withOpacity(0.3)
-                                        : Colors.green.withOpacity(0.3),
+                                        ? Colors.blue.withValues(alpha: 0.3)
+                                        : Colors.green.withValues(alpha: 0.3),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
@@ -974,7 +974,7 @@ Garde tes réponses courtes (2-4 phrases max) pour être affichées sur le miroi
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 15),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.2),
+                        color: Colors.amber.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.amber),
                       ),
@@ -1003,7 +1003,7 @@ Garde tes réponses courtes (2-4 phrases max) pour être affichées sur le miroi
                       padding: const EdgeInsets.all(15),
                       margin: const EdgeInsets.only(bottom: 20),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.2),
+                        color: Colors.green.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(color: Colors.greenAccent),
                       ),
@@ -1029,8 +1029,8 @@ Garde tes réponses courtes (2-4 phrases max) pour être affichées sur le miroi
                       padding: const EdgeInsets.all(25),
                       decoration: BoxDecoration(
                         color: _isListening
-                            ? Colors.red.withOpacity(0.3)
-                            : Colors.white.withOpacity(0.1),
+                            ? Colors.red.withValues(alpha: 0.3)
+                            : Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(25),
                         border: Border.all(
                           color: _isListening ? Colors.red : Colors.cyanAccent,
@@ -1073,10 +1073,10 @@ Garde tes réponses courtes (2-4 phrases max) pour être affichées sur le miroi
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.deepPurple.withOpacity(0.3),
+                      color: Colors.deepPurple.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: Colors.deepPurpleAccent.withOpacity(0.6)),
+                          color: Colors.deepPurpleAccent.withValues(alpha: 0.6)),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1114,8 +1114,8 @@ Garde tes réponses courtes (2-4 phrases max) pour être affichées sur le miroi
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             color: r['active']
-                                ? Colors.purpleAccent.withOpacity(0.2)
-                                : Colors.grey.withOpacity(0.2),
+                                ? Colors.purpleAccent.withValues(alpha: 0.2)
+                                : Colors.grey.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: r['active']

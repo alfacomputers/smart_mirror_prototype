@@ -424,7 +424,7 @@ Future<void> _askAI(String message) async {
                   Container(
                     padding: const EdgeInsets.all(15),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: const Row(
@@ -455,7 +455,7 @@ Future<void> _askAI(String message) async {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: _getMoodColor().withOpacity(0.2),
+                      color: _getMoodColor().withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: _getMoodColor()),
                     ),
@@ -478,10 +478,10 @@ Future<void> _askAI(String message) async {
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(
-                          color: Colors.cyanAccent.withOpacity(0.3),
+                          color: Colors.cyanAccent.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Column(
@@ -507,8 +507,8 @@ Future<void> _askAI(String message) async {
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
                                     color: isUser
-                                        ? Colors.blue.withOpacity(0.3)
-                                        : Colors.green.withOpacity(0.3),
+                                        ? Colors.blue.withValues(alpha: 0.3)
+                                        : Colors.green.withValues(alpha: 0.3),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
@@ -559,7 +559,7 @@ Future<void> _askAI(String message) async {
                       padding: const EdgeInsets.all(15),
                       margin: const EdgeInsets.only(bottom: 20),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.2),
+                        color: Colors.green.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(color: Colors.greenAccent),
                       ),
@@ -584,8 +584,8 @@ Future<void> _askAI(String message) async {
                       padding: const EdgeInsets.all(25),
                       decoration: BoxDecoration(
                         color: _isListening
-                            ? Colors.red.withOpacity(0.3)
-                            : Colors.white.withOpacity(0.1),
+                            ? Colors.red.withValues(alpha: 0.3)
+                            : Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(25),
                         border: Border.all(
                           color: _isListening ? Colors.red : Colors.cyanAccent,
@@ -639,8 +639,8 @@ Future<void> _askAI(String message) async {
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             color: r['active']
-                                ? Colors.purpleAccent.withOpacity(0.2)
-                                : Colors.grey.withOpacity(0.2),
+                                ? Colors.purpleAccent.withValues(alpha: 0.2)
+                                : Colors.grey.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: r['active']
