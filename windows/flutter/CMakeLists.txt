@@ -4,7 +4,19 @@ cmake_minimum_required(VERSION 3.14)
 set(EPHEMERAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ephemeral")
 
 # Configuration provided via flutter tool.
+if (NOT DEFINED FLUTTER_ROOT)
+  if (EXISTS "C:/flutter/flutter")
+    set(FLUTTER_ROOT "C:/flutter/flutter" CACHE PATH "Flutter SDK root")
+  elseif (EXISTS "C:/flutter")
+    set(FLUTTER_ROOT "C:/flutter" CACHE PATH "Flutter SDK root")
+  endif()
+endif()
+
 include(${EPHEMERAL_DIR}/generated_config.cmake)
+
+if (NOT DEFINED FLUTTER_ROOT)
+  message(FATAL_ERROR "FLUTTER_ROOT is not defined. Install Flutter or set FLUTTER_ROOT. Default fallback path: C:/flutter/flutter")
+endif()
 
 # TODO: Move the rest of this into files in ephemeral. See
 # https://github.com/flutter/flutter/issues/57146.
